@@ -190,6 +190,10 @@ def run_fair_bounding(probability_df,metric,bias,DAG_dict,sensitivity_parameter_
 
     print("Loading_data")
 
+    if bias == "Proxy_Y":
+        probability_df["Z"] = probability_df["Y"]
+        probability_df.drop("Y",axis=1)
+
     if bias == "Selection":
         probability_df["S"] = 0
         problem.load_data(StringIO(probability_df.to_csv(index=False)), cond = ["S"])
