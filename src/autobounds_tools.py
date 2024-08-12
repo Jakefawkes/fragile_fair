@@ -180,7 +180,7 @@ def get_sensitivity_parameter(problem,bias):
         return problem.query("Y(T=1)=1&Y(T=0)=0")+problem.query("Y(T=1)=0&Y(T=0)=1")
     
     if bias == "Selection":
-        return problem.query("S=1")
+        return problem.query("S=0")
     
 def run_fair_bounding(probability_df,metric,bias,DAG_dict,sensitivity_parameter_value=0.05,**kwargs):
     
@@ -195,7 +195,7 @@ def run_fair_bounding(probability_df,metric,bias,DAG_dict,sensitivity_parameter_
         probability_df.drop("Y",axis=1)
 
     if bias == "Selection":
-        probability_df["S"] = 0
+        probability_df["S"] = 1
         problem.load_data(StringIO(probability_df.to_csv(index=False)), cond = ["S"])
     
     else:
