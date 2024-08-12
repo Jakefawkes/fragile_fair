@@ -1,8 +1,6 @@
 from autobound.causalProblem import causalProblem
 from autobound.DAG import DAG
-import glob
 from autobound.Query import Query
-from matplotlib import pyplot as plt
 import pandas as pd
 from io import StringIO
 
@@ -86,7 +84,7 @@ def get_metric_expressions(problem,metric="FPR",ECP=False,**kwargs):
         conditioning_value = 1
 
         numerator = get_numerator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
-        denominator = get_denominator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
+        denominator = get_denominator_for_difference_metrics(problem,conditioning_variable,conditioning_value)
 
     elif metric == "PPP":
         target_variable = "Y"
@@ -98,7 +96,7 @@ def get_metric_expressions(problem,metric="FPR",ECP=False,**kwargs):
             target_variable = "Y(D=1)"
         
         numerator = get_numerator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
-        denominator = get_denominator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
+        denominator = get_denominator_for_difference_metrics(problem,conditioning_variable,conditioning_value)
     
     elif metric == "NPP":
         target_variable = "Y"
@@ -110,7 +108,7 @@ def get_metric_expressions(problem,metric="FPR",ECP=False,**kwargs):
             target_variable = "Y(D=1)"
 
         numerator = get_numerator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
-        denominator = get_denominator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
+        denominator = get_denominator_for_difference_metrics(problem,conditioning_variable,conditioning_value)
 
     elif metric == "DP":
         target_variable = "P"
@@ -120,7 +118,7 @@ def get_metric_expressions(problem,metric="FPR",ECP=False,**kwargs):
 
 
         numerator = get_numerator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
-        denominator = get_denominator_for_difference_metrics(problem,target_variable,conditioning_variable,target_value,conditioning_value)
+        denominator = get_denominator_for_difference_metrics(problem,conditioning_variable,conditioning_value)
     
     elif metric == "FPR_Fogliato":
 
@@ -181,6 +179,9 @@ def get_sensitivity_parameter(problem,bias):
     if bias == "ECP":
         return problem.query("Y(T=1)=1&Y(T=0)=0")+problem.query("Y(T=1)=0&Y(T=0)=1")
     
+    if bias == "Selection":
+        return problem.query("S=1")
+    
 def run_fair_bounding(probability_df,metric,bias,DAG_dict,sensitivity_parameter_value=0.05,**kwargs):
     
     dag = DAG()
@@ -188,7 +189,13 @@ def run_fair_bounding(probability_df,metric,bias,DAG_dict,sensitivity_parameter_
     problem = causalProblem(dag)
 
     print("Loading_data")
-    problem.load_data(StringIO(probability_df.to_csv(index=False)))
+
+    if bias == "Selection":
+        probability_df["S"] = 0
+        problem.load_data(StringIO(probability_df.to_csv(index=False)), cond = ["S"])
+    
+    else:
+        problem.load_data(StringIO(probability_df.to_csv(index=False)))
     problem.add_prob_constraints()
 
     print("Collecting term")
@@ -201,11 +208,9 @@ def run_fair_bounding(probability_df,metric,bias,DAG_dict,sensitivity_parameter_
     program = problem.write_program()
     
     print("Running Autobounds")
-    try:
-        result = program.run_pyomo('ipopt',verbose=False)
+    result = program.run_pyomo('ipopt',verbose=False)
 
-    except:
-        result = (None,None,False,False)
+
     return result
 
 
