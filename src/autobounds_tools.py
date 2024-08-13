@@ -274,7 +274,7 @@ def parse_constraint(problem, constraint, D):
 
                      
 def run_autobounds(
-        probability_df, metric, dag_str, unob, constraints, 
+        probability_df, metric, dag_str, unob, constraints,cond_vertex=[], 
         sensitivity_parameter_value=0.05, verbose=0, 
         **kwargs
 ): 
@@ -284,7 +284,7 @@ def run_autobounds(
 
     if verbose == 1:
         print("Loading_data")
-    problem.load_data(probability_df)
+    problem.load_data(probability_df,cond = cond_vertex)
     problem.add_prob_constraints()
 
     if verbose == 1:
@@ -317,8 +317,14 @@ def run_standard_fair_bounding(
     unob = dag_dict["Unobserved"]
     constraints = Standard_constraint_list[bias]
 
+    if bias == "Selection":
+        cond_vertex = ["S"]
+    
+    else:
+        cond_vertex = []
+
     return run_autobounds(
-        probability_df, metric, dag_str, unob, constraints, 
+        probability_df, metric, dag_str, unob, constraints, cond_vertex=cond_vertex,
         sensitivity_parameter_value=sensitivity_parameter_value, verbose=verbose,
         kwargs=kwargs)
 
