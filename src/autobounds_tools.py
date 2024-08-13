@@ -169,6 +169,11 @@ DAG_string_dict = {
     "ECP" :  {"DAG":"A -> Y, A->P, A -> D, U->P, U -> Y, U -> D, D->Y","Unobserved":"U"}
 }
 
+Standard_constraint_list = {
+    "Proxy_Y": ["P(Z=0 & Y=0) + P(Z=1 & Y=1) >= 1-D"],
+    "Selection": ["P(S=1) >= 1-D"],
+}
+
 def get_sensitivity_parameter(problem,bias):
 
     if bias == "Proxy_Y":
@@ -181,6 +186,7 @@ def get_sensitivity_parameter(problem,bias):
         return problem.query("S=0")
      
 import re
+
 def split_string_with_delimiters(input_string, delimiters):
     # Create a regex pattern with the delimiters
     regex_pattern = '|'.join(map(re.escape, delimiters))
@@ -267,7 +273,7 @@ def parse_constraint(problem, constraint, D):
     problem.add_constraint(constraint, inequality_symbol)
 
                      
-def run_fair_bounding(
+def run_autobounds(
         probability_df, metric, dag_str, unob, constraints, 
         sensitivity_parameter_value=0.05, verbose=0, 
         **kwargs
@@ -302,5 +308,17 @@ def run_fair_bounding(
 
     return result
 
+def run_standard_fair_bounding(
+        probability_df, metric, bias,  
+        sensitivity_parameter_value=0.05, verbose=0,**kwargs
+): 
+    dag_dict = DAG_string_dict[bias]
+    dag_str = dag_dict["DAG"]
+    unob = dag_dict["Unobserved"]
+    constraints = Standard_constraint_list[bias]
 
+    return run_autobounds(
+        probability_df, metric, dag_str, unob, constraints, 
+        sensitivity_parameter_value=sensitivity_parameter_value, verbose=verbose,
+        kwargs=kwargs)
 
