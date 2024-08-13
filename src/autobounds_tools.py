@@ -62,8 +62,6 @@ def get_denominator_for_difference_metrics(problem,conditioning_variable,conditi
     return term
 
 def get_metric_expressions(problem,metric="FPR",ECP=False,**kwargs):
-
-
     if metric == "FPR":
         target_variable = "P"
         target_value = 1
@@ -181,39 +179,126 @@ def get_sensitivity_parameter(problem,bias):
     
     if bias == "Selection":
         return problem.query("S=0")
+     
+import re
+def split_string_with_delimiters(input_string, delimiters):
+    # Create a regex pattern with the delimiters
+    regex_pattern = '|'.join(map(re.escape, delimiters))
     
-def run_fair_bounding(probability_df,metric,bias,DAG_dict,sensitivity_parameter_value=0.05,**kwargs):
+    # Split the string using the regex pattern
+    split_string_and_delims = re.split(f'({regex_pattern})', input_string)
+
+    split_string, used_delimiters = [], []
+    for s in split_string_and_delims:
+        if s in delimiters:
+            used_delimiters.append(s)
+        else:
+            split_string.append(s)
     
+    return split_string, used_delimiters
+
+def parse_constraint(problem, constraint, D):
+    """
+    Parse and add a constraint to the problem.
+    
+    Args:
+    - problem: The problem object where constraints are to be added.
+    - constraint: A string representing the constraint, e.g., "P(A=1 & C=1) + P(A=0 & C=0) >= 1 - D".
+    - D: The variable D used in the constraint.
+    """
+    # Define the valid operators
+    valid_operators = ['+', '-', '*', '/']
+    inequality_symbols = ['>=', '<=', '==']
+    
+    # Identify the inequality symbol in the constraint
+    inequality_symbol = None
+    for symbol in inequality_symbols:
+        if symbol in constraint:
+            inequality_symbol = symbol
+            break
+    
+    if inequality_symbol is None:
+        raise ValueError("Invalid constraint: must contain >=, <=, or ==")
+    
+    def token_to_query(token):
+        if token.startswith('P('):
+            return problem.query(token[2:-1])  # Strip P( and )
+        elif token == 'D':
+            print("D",D)
+            return Query(D)       
+        elif re.match(r'^([0-9]+(\.[0-9]+)?)$', token):
+            return Query(float(token))
+        else:
+            raise ValueError(f"Invalid token: {token}")
+        
+    def combine_queries(lhs, rhs, operator):
+        if operator == '+':
+            return lhs + rhs
+        elif operator == '-':
+            return lhs - rhs
+        elif operator == '*':
+            return lhs * rhs
+        elif operator == '/':
+            return lhs / rhs
+        else:
+            raise ValueError(f"Invalid operator: {operator}")
+    
+    lhs, rhs = constraint.split(inequality_symbol)
+    lhs = "".join(lhs.split())
+    rhs = "".join(rhs.split())
+    
+    lhs_tokens, lhs_operators = split_string_with_delimiters(lhs, valid_operators)
+    rhs_tokens, rhs_operators = split_string_with_delimiters(rhs, valid_operators)
+
+    print("lhs_tokens",lhs_tokens)
+    print("lhs_operators",lhs_operators)
+    print("rhs_tokens",rhs_tokens)
+    print("rhs_operators",rhs_operators)
+    constraint = token_to_query(lhs_tokens[0])
+    for operator, token in zip(lhs_operators, lhs_tokens[1:]):
+        query = token_to_query(token)
+        constraint = combine_queries(constraint, query, operator)
+
+    rhs_operators = ['-'] + ['-' if op == '+' else '+' if op == '-' else op for op in rhs_operators]
+    for operator, token in zip(rhs_operators, rhs_tokens):
+        query = token_to_query(token)
+        constraint = combine_queries(constraint, query, operator)
+
+    problem.add_constraint(constraint, inequality_symbol)
+
+                     
+def run_fair_bounding(
+        probability_df, metric, dag_str, unob, constraints, 
+        sensitivity_parameter_value=0.05, verbose=0, 
+        **kwargs
+): 
     dag = DAG()
-    dag.from_structure(DAG_dict["DAG"], unob = DAG_dict["Unobserved"])
+    dag.from_structure(dag_str, unob = unob)
     problem = causalProblem(dag)
 
-    print("Loading_data")
-
-    if bias == "Proxy_Y":
-        probability_df["Z"] = probability_df["Y"]
-        probability_df.drop("Y",axis=1)
-
-    if bias == "Selection":
-        probability_df["S"] = 1
-        problem.load_data(StringIO(probability_df.to_csv(index=False)), cond = ["S"])
-    
-    else:
-        problem.load_data(StringIO(probability_df.to_csv(index=False)))
+    if verbose == 1:
+        print("Loading_data")
+    problem.load_data(probability_df)
     problem.add_prob_constraints()
 
-    print("Collecting term")
-    numerator,denominator = get_metric_expressions(problem,metric=metric,ECP=(bias=="ECP"),kwargs=kwargs)
+    if verbose == 1:
+        print("Collecting term")
+    numerator, denominator = get_metric_expressions(
+        problem, metric=metric, ECP=False, kwargs=kwargs
+    )
 
-    print("Setting Estimand")
-    problem.set_estimand(numerator,div=denominator)
+    if verbose == 1:
+        print("Setting Estimand")
+    problem.set_estimand(numerator, div=denominator)
     
-    problem.add_constraint(get_sensitivity_parameter(problem,bias) - Query(sensitivity_parameter_value),symbol="<=")
+    for constraint in constraints:
+        parse_constraint(problem, constraint, sensitivity_parameter_value)
+    
     program = problem.write_program()
     
-    print("Running Autobounds")
+    if verbose == 1:
+        print("Running Autobounds")
     result = program.run_pyomo('ipopt',verbose=False)
-
 
     return result
 
