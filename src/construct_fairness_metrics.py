@@ -90,15 +90,27 @@ def get_metric_expressions(
         denominator = get_denominator_for_difference_metrics(
             problem, cond_variable, conditioning_value
         )
-    elif metric == "TE":
-        numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') + problem.query(f'{prediction_variable}({attribute_variable}=0)=1', -1)
-        denominator = Query(1)
-    elif metric  == "CF":
-        numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1&{prediction_variable}({attribute_variable}=0)=1') + problem.query(f'{prediction_variable}({attribute_variable}=1)=0&{prediction_variable}({attribute_variable}=0)=0')
-        denominator = Query(1)
-    elif metric == "SE":
-        numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') * problem.query(f'{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=1', -1)
-        denominator = problem.query(f'{attribute_variable}=1')
+    elif metric in ["TE","CF","SE"]:
+
+        if "(" in prediction_variable:
+            raise ValueError("Prediction variable cannot be interventional for causal metrics")
+
+        elif "(" in attribute_variable:
+            raise ValueError("Attribute variable cannot be interventional for causal metrics")
+
+        elif "(" in outcome_variable:
+            raise ValueError("Outcome variable cannot be interventional for causal metrics")
+
+        elif metric == "TE":
+            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') + problem.query(f'{prediction_variable}({attribute_variable}=0)=1', -1)
+            denominator = Query(1)
+        elif metric  == "CF":
+            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1&{prediction_variable}({attribute_variable}=0)=1') + problem.query(f'{prediction_variable}({attribute_variable}=1)=0&{prediction_variable}({attribute_variable}=0)=0')
+            denominator = Query(1)
+        elif metric == "SE":
+            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') * problem.query(f'{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=1', -1)
+            denominator = problem.query(f'{attribute_variable}=1')
+
     else:
         raise ValueError(f"Metric {metric} not recognized.")
     return numerator, denominator
