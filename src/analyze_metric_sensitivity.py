@@ -24,7 +24,7 @@ def analyze_metric_sensitivity(
     - verbose: The verbosity level.
     """
     dag = DAG()
-    dag.from_structure(dag_str, unob = " ".join(unob))
+    dag.from_structure(dag_str, unob = unob)
     problem = causalProblem(dag)
 
     # This handles conditional node logic:

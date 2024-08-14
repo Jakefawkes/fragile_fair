@@ -1,0 +1,9 @@
+{
+    "dag_str": "B -> Y, B->P,B->A, U->P, U -> Y, U -> A",
+    "unob": ["U"],
+    "cond_nodes": null ,
+    "constraints": ["P(A = 1 & B = 0) + P(A = 0 & B = 1) <= D"],
+    "attribute_node": "B",
+    "outcome_node": "Y",
+    "prediction_node": "P"
+}
