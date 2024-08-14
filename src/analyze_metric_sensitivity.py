@@ -18,7 +18,8 @@ def analyze_metric_sensitivity(
     - dag_str: The DAG string.
     - unob: The unobserved variable.
     - constraints: The constraints to add.
-    - cond_vertex: The conditioning vertex.
+    - cond_nodes: The conditioning vertex.
+    - cond_node_values: The conditioning vertex values.
     - sensitivity_parameter_value: The sensitivity parameter value.
     - verbose: The verbosity level.
     """

@@ -98,7 +98,7 @@ def get_metric_expressions(
         denominator = Query(1)
     elif metric == "SE":
         numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') * problem.query(f'{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=1', -1)
-        denominator = problem.query('A=1')
+        denominator = problem.query(f'{attribute_variable}=1')
     else:
         raise ValueError(f"Metric {metric} not recognized.")
     return numerator, denominator

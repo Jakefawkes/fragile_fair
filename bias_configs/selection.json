@@ -1,8 +1,8 @@
 {
     "dag_str": "A->Y, A->P, A->S, U->P, U->Y, U->S, Y->S",
-    "unob": "U",
-    "constraints": ["P(S = 1) >= 1 - D"],
+    "unob": ["U"],
     "cond_nodes": ["S"],
+    "constraints": ["P(S = 1) >= 1 - D"],
     "attribute_node": "A",
     "outcome_node": "Y",
     "prediction_node": "P"
