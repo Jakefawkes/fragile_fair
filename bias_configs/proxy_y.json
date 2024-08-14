@@ -1,6 +1,6 @@
 {
     "dag_str": "A -> Y, A->P, A -> Z, U->P, U -> Y, U -> Z, Z->Y",
-    "unob": "U",
+    "unob": ["U"],
     "cond_nodes": null ,
     "constraints": ["P(Z = 0 & Y = 0) + P(Z = 1 & Y = 1) >= 1 - D"],
     "attribute_node": "A",
