@@ -83,7 +83,7 @@ def analyze_metric_sensitivity(
 def analyze_metric_bias_sensitivity(
         probability_df, metric, bias, 
         sensitivity_parameter_values=0.05, 
-        verbose=0, get_metric_expressions=None
+        verbose=0, get_metric_fns=None
 ):  
     current_dir = os.path.dirname(__file__)  # Get the directory of the current module
     with open(os.path.join(current_dir, "bias_configs", f"{bias}.json")) as f:
@@ -93,7 +93,7 @@ def analyze_metric_bias_sensitivity(
         probability_df, 
         metric=metric,
         sensitivity_parameter_values=sensitivity_parameter_values,
-        verbose=verbose, get_metric_expressions=get_metric_expressions,
+        verbose=verbose, get_metric_fns=get_metric_fns,
         **bias_config
     )
 
