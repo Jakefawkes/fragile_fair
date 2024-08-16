@@ -32,7 +32,7 @@ These are required to set numerous parameters for the sensativity analysis. Walk
 ### experiments
 Contains notebooks to reproduce each figure in the paper alongside the `experiments/playground.ipynb` notebook which contains an introduction to the code. 
 
-### experiments
+### data
 Contains example csv's that can be inputted as `observed_joint_table` into `analyze_metric_sensitivity`. This folder also contains the csvs to reproduce the experiments in the paper. 
 
 ## Enviroment Setup 
