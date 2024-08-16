@@ -1,5 +1,5 @@
 from sklearn.linear_model import LogisticRegression
-from fairlearn.reductions import GridSearch,DemographicParity,FalsePositiveRateParity,ErrorRate,TruePositiveRateParity
+from fairlearn.reductions import GridSearch,DemographicParity,FalsePositiveRateParity,ErrorRate,TruePositiveRateParity,EqualizedOdds
 from fairlearn.metrics import false_negative_rate,false_positive_rate,demographic_parity_difference
 import pandas as pd
 import itertools
@@ -10,7 +10,7 @@ import yaml
 bias_list = ["proxy_Y","proxy_A","selection","ECD"]
 disparity_metrics_list = ["FPR","FNR","PPP","NPP","DP"]
 
-def calc_disparity_metric(Y, Y_hat, A, disparity_metric="FPR"):
+def calc_disparity_metric(Y,Y_hat,A,disparity_metric="FPR"):
     
     if disparity_metric=="FPR":
         val = false_positive_rate(Y[A==1],Y_hat[A==1]) - false_positive_rate(Y[A==0],Y_hat[A==0])
@@ -27,10 +27,14 @@ def calc_disparity_metric(Y, Y_hat, A, disparity_metric="FPR"):
     if disparity_metric=="DP":
         val = sum(Y_hat[A==1])/len(Y_hat[A==1])-sum(Y_hat[A==0])/len(Y_hat[A==0])
     
+    if disparity_metric=="EO_max":
+        val = max(abs(false_positive_rate(Y[A==1],Y_hat[A==1]) - false_positive_rate(Y[A==0],Y_hat[A==0]))
+                  ,(abs(false_negative_rate(Y[A==1],Y_hat[A==1]) - false_negative_rate(Y[A==0],Y_hat[A==0]))))
+    
     return val
 
-def train_fairness_classifiers(X_train, y_train, A_train, disparity_metric="FPR", grid_size=80, classifier=LogisticRegression):
-    fairlearn_constraint = False
+def train_fairness_classifiers(X_train,y_train,A_train,disparity_metric="FPR",grid_size=80,classifier=LogisticRegression):
+    
     if disparity_metric=="FPR":
         fairlearn_metric = FalsePositiveRateParity
         fairlearn_constraint = True
@@ -48,6 +52,10 @@ def train_fairness_classifiers(X_train, y_train, A_train, disparity_metric="FPR"
     
     if disparity_metric == "NPP":
         fairlearn_constraint = False
+    
+    if disparity_metric[:2] == "EO":
+        fairlearn_metric = EqualizedOdds
+        fairlearn_constraint = True
 
     if fairlearn_constraint:
         sweep = GridSearch(classifier(),
@@ -94,20 +102,7 @@ def train_fairness_classifiers(X_train, y_train, A_train, disparity_metric="FPR"
 
     return non_dominated
 
-def save_proxy_prob_csv(save_string,predictor,X_test,y_test,A_test):
-    df = {"A":A_test,"Z":y_test,"P":predictor.predict(X_test)}
-    df = pd.DataFrame(df)
-    data_dict = {"A":[],"Z":[],"P":[],"prob":[]}
-    for i,j,k in itertools.product(range(2),range(2),range(2)):
-        p = np.zeros([2,2,2])
-        p[i,j,k] =   ((df["A"] == i)  & (df["Z"] == j) & (df["P"] == k)).mean()
-        data_dict["A"].append(i)
-        data_dict["Z"].append(j)
-        data_dict["P"].append(k)
-        data_dict["prob"].append((p[i,j,k].item()))
-    prob_df = pd.DataFrame(data_dict)
-    prob_df.to_csv(save_string,index=False)
-    return prob_df
+
 
 def return_prob_df(predictor,X_test,y_test,A_test):
     df = {"A":A_test,"Z":y_test,"P":predictor.predict(X_test)}
