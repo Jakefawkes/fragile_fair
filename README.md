@@ -39,14 +39,13 @@ Contains example csv's that can be inputted as `observed_joint_table` into `anal
 
 We recommend packages with conda to prevent having to manually install ipopt. In order to run all experiments run:
 
-"""
-conda env create -f full_environment.yml
-"""
+
+`conda env create -f full_environment.yml`
+
 
 If the preference is to only run the playground.ipynb file and to begin using the bounding tools without recreating the figures from the paper, please run:
 
-"""
-conda env create -f base_environment.yml
-"""
+
+`conda env create -f base_environment.yml`
 
 
