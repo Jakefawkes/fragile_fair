@@ -10,31 +10,22 @@ import yaml
 bias_list = ["proxy_Y","proxy_A","selection","ECD"]
 disparity_metrics_list = ["FPR","FNR","PPP","NPP","DP"]
 
-def calc_disparity_metric(Y,Y_hat,A,disparity_metric="FPR"):
-    
-    if disparity_metric=="FPR":
-        val = false_positive_rate(Y[A==1],Y_hat[A==1]) - false_positive_rate(Y[A==0],Y_hat[A==0])
-    
-    if disparity_metric=="FNR":
-        val = false_negative_rate(Y[A==1],Y_hat[A==1]) - false_negative_rate(Y[A==0],Y_hat[A==0])
-    
-    if disparity_metric=="PPP":
-        val = -(false_negative_rate(Y_hat[A==1],Y[A==1]) - false_negative_rate(Y_hat[A==0],Y[A==0]))
-    
-    if disparity_metric=="NPP":
-        val = false_positive_rate(Y_hat[A==1],Y[A==1]) -false_positive_rate(Y_hat[A==0],Y[A==0])
-    
-    if disparity_metric=="DP":
-        val = sum(Y_hat[A==1])/len(Y_hat[A==1])-sum(Y_hat[A==0])/len(Y_hat[A==0])
-    
-    if disparity_metric=="EO_max":
-        val = max(abs(false_positive_rate(Y[A==1],Y_hat[A==1]) - false_positive_rate(Y[A==0],Y_hat[A==0]))
-                  ,(abs(false_negative_rate(Y[A==1],Y_hat[A==1]) - false_negative_rate(Y[A==0],Y_hat[A==0]))))
-    
-    return val
+disparity_metric_fns = {
+    "FPR": lambda Y, Y_hat, A: false_positive_rate(Y[A==1], Y_hat[A==1]) - false_positive_rate(Y[A==0], Y_hat[A==0]),
+    "FNR": lambda Y, Y_hat, A: false_negative_rate(Y[A==1], Y_hat[A==1]) - false_negative_rate(Y[A==0], Y_hat[A==0]),
+    "PPP": lambda Y, Y_hat, A: false_negative_rate(Y_hat[A==0], Y[A==0]) - false_negative_rate(Y_hat[A==1], Y[A==1]),
+    "NPP": lambda Y, Y_hat, A: false_positive_rate(Y_hat[A==1], Y[A==1]) - false_positive_rate(Y_hat[A==0], Y[A==0]),
+    "DP": lambda Y, Y_hat, A: sum(Y_hat[A==1]) / len(Y_hat[A==1]) - sum(Y_hat[A==0]) / len(Y_hat[A==0]),
+    "EO_max": lambda Y, Y_hat, A: max(
+        abs(disparity_metric_fns["FPR"](Y, Y_hat, A)), abs(disparity_metric_fns["FNR"](Y, Y_hat, A))
+    )
+}
+
+def calc_disparity_metric(Y, Y_hat, A, disparity_metric="FPR"):
+    return disparity_metric_fns[disparity_metric](Y, Y_hat, A)
 
 def train_fairness_classifiers(X_train,y_train,A_train,disparity_metric="FPR",grid_size=80,classifier=LogisticRegression):
-    
+
     if disparity_metric=="FPR":
         fairlearn_metric = FalsePositiveRateParity
         fairlearn_constraint = True
@@ -93,7 +84,6 @@ def train_fairness_classifiers(X_train,y_train,A_train,disparity_metric="FPR",gr
     disparity_level = [abs(calc_disparity_metric(y_train,classifer.predict(X=X_train),A_train,disparity_metric=disparity_metric)) for classifer in non_dominated]
     non_dominated = [x for _,_, x in sorted(zip(disparity_level,list(range(len(disparity_level))) ,non_dominated))]
 
-    
     # predictor_list = [classifier for classifier in predictor_list if sum(classifier.predict(X=X_train)==0) != len(y_train)]
     # predictor_list = [classifier for classifier in predictor_list if sum(classifier.predict(X=X_train)==1) != len(y_train)]
 
@@ -132,10 +122,10 @@ def return_prob_df_unselected(predictor,X_test,y_test,A_test,select_vec):
     prob_df = pd.DataFrame(data_dict)
     return prob_df
 
-def predictor_dict_from_list(name_string,predictor_list,X_test,y_test,A_test,num_predictors,disparity_metric="FNR"):
+def predictor_dict_from_list(name_string, predictor_list, X_test, y_test, A_test, num_predictors, disparity_metric="FNR"):
     predictor_list = [classifier for classifier in predictor_list if sum(classifier.predict(X=X_test)==0) != len(y_test)]
     predictor_list = [classifier for classifier in predictor_list if sum(classifier.predict(X=X_test)==1) != len(y_test)]
-    if len(predictor_list)< num_predictors:
+    if len(predictor_list) < num_predictors:
         num_predictors = len(predictor_list)
 
     metric_val_list = [abs(calc_disparity_metric(y_test,classifer.predict(X=X_test),A_test,disparity_metric=disparity_metric)) for classifer in predictor_list]

@@ -50,7 +50,7 @@ def get_denominator_for_difference_metrics(
 
 def get_metric_expressions(
         problem, metric="FPR", 
-        prediction_variable="P", attribute_variable="A", outcome_variable="Y"
+        prediction_variable="P", attribute_variable="A", outcome_variable="Y",
 ):
     """
     This function returns the numerator and denominator for a given metric.
@@ -91,29 +91,21 @@ def get_metric_expressions(
             problem, cond_variable, conditioning_value
         )
     elif metric in ["TE","CF","SE"]:
-
         if "(" in prediction_variable:
             raise ValueError("Prediction variable cannot be interventional for causal metrics")
-
         elif "(" in attribute_variable:
             raise ValueError("Attribute variable cannot be interventional for causal metrics")
-
         elif "(" in outcome_variable:
             raise ValueError("Outcome variable cannot be interventional for causal metrics")
-
         elif metric == "TE":
-            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') + problem.query(f'{prediction_variable}({attribute_variable}=0)=1', -1)
+            numerator = problem.query(f'P({prediction_variable}({attribute_variable}=1)=1)') + problem.query(f'P({prediction_variable}({attribute_variable}=0)=1)', -1)
             denominator = Query(1)
         elif metric  == "CF":
-            # numerator = problem.query('P(A=1)=1&P(A=0)=1') + problem.query('P(A=1)=0&P(A=0)=0')
-            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1 & {prediction_variable}({attribute_variable}=0)=1') + problem.query(f'{prediction_variable}({attribute_variable}=1)=0&{prediction_variable}({attribute_variable}=0)=0')
+            numerator = problem.query(f'P({prediction_variable}({attribute_variable}=1)=1 & {prediction_variable}({attribute_variable}=0)=1)') + problem.query(f'P({prediction_variable}({attribute_variable}=1)=0&{prediction_variable}({attribute_variable}=0)=0)')
             denominator = Query(1)
         elif metric == "SE":
-            # numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') * problem.query(f'{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=1', -1)
-            # denominator = problem.query(f'{attribute_variable}=1')
-            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1')*problem.query('{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=0',-1)
-            denominator = Query(1)
-
+            numerator = problem.query(f'P({prediction_variable}({attribute_variable}=1)=1)') * problem.query(f'P({attribute_variable}=1)') + problem.query(f'P({prediction_variable}=1&{attribute_variable}=1)', -1)
+            denominator = problem.query(f'P({attribute_variable}=1)')
     else:
         raise ValueError(f"Metric {metric} not recognized.")
     return numerator, denominator
