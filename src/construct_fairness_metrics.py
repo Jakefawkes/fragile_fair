@@ -95,8 +95,6 @@ def get_metric_expressions(
             raise ValueError("Prediction variable cannot be interventional for causal metrics")
         elif "(" in attribute_variable:
             raise ValueError("Attribute variable cannot be interventional for causal metrics")
-        elif "(" in outcome_variable:
-            raise ValueError("Outcome variable cannot be interventional for causal metrics")
         elif metric == "TE":
             numerator = problem.query(f'P({prediction_variable}({attribute_variable}=1)=1)') + problem.query(f'P({prediction_variable}({attribute_variable}=0)=1)', -1)
             denominator = Query(1)
