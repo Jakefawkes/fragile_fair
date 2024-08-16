@@ -105,11 +105,14 @@ def get_metric_expressions(
             numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') + problem.query(f'{prediction_variable}({attribute_variable}=0)=1', -1)
             denominator = Query(1)
         elif metric  == "CF":
-            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1&{prediction_variable}({attribute_variable}=0)=1') + problem.query(f'{prediction_variable}({attribute_variable}=1)=0&{prediction_variable}({attribute_variable}=0)=0')
+            # numerator = problem.query('P(A=1)=1&P(A=0)=1') + problem.query('P(A=1)=0&P(A=0)=0')
+            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1 & {prediction_variable}({attribute_variable}=0)=1') + problem.query(f'{prediction_variable}({attribute_variable}=1)=0&{prediction_variable}({attribute_variable}=0)=0')
             denominator = Query(1)
         elif metric == "SE":
-            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') * problem.query(f'{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=1', -1)
-            denominator = problem.query(f'{attribute_variable}=1')
+            # numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1') * problem.query(f'{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=1', -1)
+            # denominator = problem.query(f'{attribute_variable}=1')
+            numerator = problem.query(f'{prediction_variable}({attribute_variable}=1)=1')*problem.query('{attribute_variable}=1') + problem.query(f'{prediction_variable}=1&{attribute_variable}=0',-1)
+            denominator = Query(1)
 
     else:
         raise ValueError(f"Metric {metric} not recognized.")

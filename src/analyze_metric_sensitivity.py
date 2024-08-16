@@ -1,3 +1,4 @@
+import os 
 from autobound.causalProblem import causalProblem
 from autobound.DAG import DAG
 import json
@@ -7,7 +8,8 @@ def analyze_metric_sensitivity(
         observed_joint_table, metric, 
         dag_str, unob, constraints, cond_nodes=None, cond_node_values=1,
         attribute_node='A',outcome_node='Y',prediction_node='P',
-        sensitivity_parameter_value=0.05, verbose=0, 
+        sensitivity_parameter_values=0.05, verbose=0, 
+        get_metric_expressions=get_metric_expressions
 ): 
     """
     This function runs the fair bounding analysis for a given metric on a given dataset.
@@ -38,6 +40,9 @@ def analyze_metric_sensitivity(
         for node, value in zip(cond_nodes, cond_node_values):
             observed_joint_table[node] = value
 
+    if not hasattr(sensitivity_parameter_values, '__iter__'):
+        sensitivity_parameter_values = [sensitivity_parameter_values] * len(constraints)
+
     if verbose == 1:
         print("Loading_data")
     problem.load_data(observed_joint_table, cond=cond_nodes)
@@ -57,7 +62,7 @@ def analyze_metric_sensitivity(
         print("Setting Estimand")
     problem.set_estimand(numerator, div=denominator)
     
-    for constraint in constraints:
+    for constraint, sensitivity_parameter_value in zip(constraints, sensitivity_parameter_values):
         problem.add_natural_constraint(constraint, sensitivity_parameter_value)
     
     program = problem.write_program()
@@ -68,18 +73,20 @@ def analyze_metric_sensitivity(
 
     return result
 
+
 def analyze_metric_bias_sensitivity(
         probability_df, metric, bias, 
-        sensitivity_parameter_value=0.05, 
+        sensitivity_parameter_values=0.05, 
         verbose=0
-): 
-    with open(f"bias_configs/{bias}.json") as f:
+):  
+    current_dir = os.path.dirname(__file__)  # Get the directory of the current module
+    with open(os.path.join(current_dir, "bias_configs", f"{bias}.json")) as f:
         bias_config = json.load(f)
 
     return analyze_metric_sensitivity(
         probability_df, 
         metric=metric,
-        sensitivity_parameter_value=sensitivity_parameter_value,
+        sensitivity_parameter_values=sensitivity_parameter_values,
         verbose=verbose,
         **bias_config
     )
