@@ -110,7 +110,7 @@ fragile_fair/
 │       ├── proxy_y_and_selection.json
 │       ├── ecp.json
 ├── experiments/
-│   ├── fig{i}.ipynp
+│   ├── ...
 │   ├── utils.py
 ├── data/
 │   ├── ...
