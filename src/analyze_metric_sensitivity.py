@@ -13,18 +13,22 @@ def analyze_metric_sensitivity(
         get_metric_fns=None
 ): 
     """
-    This function runs the fair bounding analysis for a given metric on a given dataset.
-    
-    Args:
-    - observed_joint_table: The observed joint table.
-    - metric: The metric to analyze.
-    - dag_str: The DAG string.
-    - unob: The unobserved variable.
-    - constraints: The constraints to add.
-    - cond_nodes: The conditioning vertex.
-    - cond_node_values: The conditioning vertex values.
-    - sensitivity_parameter_value: The sensitivity parameter value.
-    - verbose: The verbosity level.
+    This function runs the fair bounding analysis for a given metric on a given dataset. Examples of the arguments are:
+    - observed_joint_table : A joint table containing the empirical distribution of the predictor.
+    - metric: todo
+    - `dag_str`: A string containing the DAG to be used in the analysis. For example in the selection config this is: 
+        "A->Y, A->P, A->S, U->P, U->Y, U->S, Y->S"
+    - `unob`: The unobserved variables in the DAG. For the above DAG this is:  ["U"],
+    - `cond_nodes` : If we observe data conditional on some value they should be included here. 
+        For example in selection we observe all data conditional on S=1 and so cond_nodes = ["S"]
+    - `constraints`: Constraints for the problem including the sensativity parameter. 
+        Provided as a list where the sensativity parameter is defined by an inequality involving the scalar D. 
+        Example: ["P(Z = 0 & Y = 0) + P(Z = 1 & Y = 1) >= 1 - D"],
+    - `attribute_node`: The node for the true attribute in the causal graph. Set to: "A" by default.
+    - `outcome_node`: The node for the true outcome in the causal graph. Set to: "Y" by default. 
+    - `prediction_node`: The node for the true prediction in the causal graph. Set to: "P" by default. 
+    - sensitivity_parameter_values: the value of the sensativity parameter, given by an int.
+
     """
     dag = DAG()
     dag.from_structure(dag_str, unob = unob)
@@ -81,16 +85,24 @@ def analyze_metric_sensitivity(
 
 
 def analyze_metric_bias_sensitivity(
-        probability_df, metric, bias, 
+        observed_joint_table, metric, bias, 
         sensitivity_parameter_values=0.05, 
         verbose=0, get_metric_expressions=None
 ):  
+    """
+    This function runs the fair bounding analysis for a standard bias config used in the paper
+    - observed_joint_table : A joint table containing the empirical distribution of the predictor.
+    - metric: todo 
+    - bias: Refers to one of the biases used in the paper with a name given by one of the jsons in src/bias_configs
+    - sensitivity_parameter_values: the value of the sensativity parameter, given by an int.
+    - get_metric_expressions: todo
+    """
     current_dir = os.path.dirname(__file__)  # Get the directory of the current module
     with open(os.path.join(current_dir, "bias_configs", f"{bias}.json")) as f:
         bias_config = json.load(f)
 
     return analyze_metric_sensitivity(
-        probability_df, 
+        observed_joint_table, 
         metric=metric,
         sensitivity_parameter_values=sensitivity_parameter_values,
         verbose=verbose, get_metric_expressions=get_metric_expressions,
