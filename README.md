@@ -1,4 +1,4 @@
-# Fragile Fair
+# Fragile Fairness
 
 This is a codebase for analyzing the fragility of fairness metrics under various measurement bias. The codebase leverages Directed Acyclic Graphs (DAGs) to model the causal relationships between the variables in the data and probabilistic constraints on those variables to allowing users to flexibly specify the causal relationships between the variables in their data. Biases are reduced to a particular DAG and a set of constraints, which we specify through a JSON config. A number of standard biases and metrics are readily implemnted in the codebase, and users can easily add their own biases and metrics.
 
