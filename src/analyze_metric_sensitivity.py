@@ -13,23 +13,65 @@ def analyze_metric_sensitivity(
         get_metric_fns=None
 ): 
     """
-    This function runs the fair bounding analysis for a given metric on a given dataset. Examples of the arguments are:
-    
-    Args: 
-    - observed_joint_table : A pandas Dataframe containing the empirical distribution of the predictor.
-    - metric: todo
-    - dag_str: A string containing the DAG to be used in the analysis. For example in the selection config this is: 
-        "A->Y, A->P, A->S, U->P, U->Y, U->S, Y->S"
-    - unob: A list containing the unobserved variables in the DAG. For the above DAG this is:  ["U"],
-    - cond_nodes : A list contianing all the conditioned nodes. For example in selection we observe all 
-        data conditional on S=1 and so cond_nodes = ["S"]
-    - constraints: A list of constraints for the problem including the sensativity parameter. 
-        The sensativity parameter is defined by an inequality involving the scalar D. 
-        Example: ["P(Z = 0 & Y = 0) + P(Z = 1 & Y = 1) >= 1 - D"],
-    - attribute_node: A string with the node for the true attribute in the causal graph. Set to: "A" by default.
-    - outcome_node: A string with the node for the true outcome in the causal graph. Set to: "Y" by default. 
-    - prediction_node: A string with the true prediction in the causal graph. Set to: "P" by default. 
-    - sensitivity_parameter_values: The value of the sensativity parameter, given by an int or list of ints.
+    This function analyzes the sensitivity of a fairness metric to a given bias.
+
+    A bias is defined by:
+        1. a DAG, specified by the edge list `dag_str`, the unobserved nodes `unob`, and the conditional nodes `cond_nodes`
+        2. a set of probabilistic constraints, specified by the list `constraints`
+
+    Rather than specifying each of these components we advise writing a bias config and passing that in using **config. 
+    A set of examples of pre-defined bias configs is provided in the `bias_configs` directory. An example config looks like:
+
+    ```json
+    {
+        "dag_str": "A->Y, A->P, A->S, U->P, U->Y, U->S, Y->S",
+        "unob": ["U"],
+        "cond_nodes": ["S"],
+        "attribute_node": "A",
+        "outcome_node": "Y",
+        "prediction_node": "P",
+        "constraints": ["P(S = 1) >= 1 - D"]
+    }
+    ```
+
+    NOTE: All variables in the DAG should be a signle character. The behavior of the function is not guaranteed if this is not the case.
+
+    Args:
+    - observed_joint_table: a pandas DataFrame containing a row for every possible combination for every observed, 
+        non-conditioned variables in the DAG and the associated probability of that combination.
+        The function `joint_distribution` in `src/data_utils.py` can be used to generate this table
+        from a DataFrame of binary columns of observed data.
+    - metric: The metric to analyze. We suuport the following metrics by default:
+        Standard metrics: FPR, FNR, PPP, NPP, DP
+        Causal metrics: TE, CF, SE.
+    - dag_str: The edge list of the DAG.
+    - unob: The list of unobserved nodes in the DAG.
+    - constraints: A list of constraints to be applied when bounding the metric, these should be written in terms of the
+        observed or conditioned variables in the DAG. The constraints should also include `D` as a variable which is replaced
+        by the input value of the sensitivity parameter.
+    - cond_nodes: A list of conditional nodes in the DAG.
+    - cond_node_values: A list of binary values for the conditional nodes in the DAG.
+    - attribute_node: The attribute node in the DAG, typically denoted by `A`.
+    - outcome_node: The outcome node in the DAG, typically denoted by `Y`.
+    - prediction_node: The prediction node in the DAG, typically denoted by `P`.
+    - sensitivity_parameter_values: A float or list of floats specifing the value of the sensitivity parameter to use when 
+        bounding the metric. If a list is provided, the length of the list should be the same as the length of the constraints list,
+        and the sensitivity parameter values will be applied to the constraints in order allowing for different sensitivity values
+        for different constraints. Note that each constraints should include `D` as the placeholder which will be replaced by the input value.
+    - verbose: The verbosity level of the function.     
+        0 is silent, 
+        1 prints the stages of the bounding process, 
+        2 prints details of internal optimization calls
+    - get_metric_fns: A function that takes a `metric` string and returns the numerator and denominator queries for that metric.
+        The only reason to provide this function is to allow for custom metrics to be used. By default, the function uses the
+        `get_metric_expressions` function from `src/construct_fairness_metrics.py`. A custom function should have the same signature
+        as `get_metric_expressions`.
+
+    Returns:
+    - lower bound: The lower bound of the metric.
+    - upper bound: The upper bound of the metric.
+    - lower bound convergence: The convergence status of the lower bound.
+    - upper bound convergence: The convergence status of the upper bound.
     """
     dag = DAG()
     dag.from_structure(dag_str, unob = unob)
@@ -52,17 +94,22 @@ def analyze_metric_sensitivity(
     if not hasattr(sensitivity_parameter_values, '__iter__'):
         sensitivity_parameter_values = [sensitivity_parameter_values] * len(constraints)
 
-    if verbose == 1:
+    if verbose >= 1:
         print("Loading_data")
     problem.load_data(observed_joint_table, cond=cond_nodes)
+
+    # Add constraints to the problem to ensure variables are treated as probabilities
     problem.add_prob_constraints()
     
+    # Add constraints to the problem
+    # The constraints should be written in terms of the observed or conditioned variables in the DAG
+    # The constraints should also include `D` as a variable which is replaced by the input value of the sensitivity parameter
     for constraint, sensitivity_parameter_value in zip(constraints, sensitivity_parameter_values):
         if verbose == 2:
             print(constraint, sensitivity_parameter_value)
         problem.add_natural_constraint(constraint, sensitivity_parameter_value)
 
-    if verbose == 1:
+    if verbose >= 1:
         print("Collecting term")
     numerator, denominator = get_metric_fns(
         problem,
@@ -72,14 +119,14 @@ def analyze_metric_sensitivity(
         prediction_variable=prediction_node
     )
 
-    if verbose == 1:
+    if verbose >= 1:
         print("Setting Estimand")
     problem.set_estimand(numerator, div=denominator)
     
     program = problem.write_program()
     
-    if verbose == 1:
-        print("Running Autobounds")
+    if verbose >= 1:
+        print("Running ipopt")
     result = program.run_pyomo('ipopt', verbose=verbose==2)
 
     return result
@@ -91,14 +138,36 @@ def analyze_metric_bias_sensitivity(
         verbose=0, get_metric_fns=None
 ):  
     """
-    This function runs the fair bounding analysis for a standard bias config used in the paper.
+    This function analyzes the sensitivity of a fairness metric to a given bias saved in a json file in the `bias_configs` directory.
+
+    This is a wrapper function around `analyze_metric_sensitivity` that loads the bias config from a json file, and the details of 
+    the arguments can be found in the docstring of `analyze_metric_sensitivity`.
+
     Args:
-    - observed_joint_table : A pandas Dataframe containing the empirical distribution of the predictor.
-    - metric: todo 
-    - bias: A string refering to one of the biases used in the paper with a name given by one of the jsons in src/bias_configs.
-        Example "proxy_y".
-    - sensitivity_parameter_values: The value of the sensativity parameter, given by an int or list of ints.
-    - get_metric_expressions: todo
+    - observed_joint_table: a pandas DataFrame containing a row for every possible combination for every observed, 
+        non-conditioned variables in the DAG and the associated probability of that combination.
+        The function `joint_distribution` in `src/data_utils.py` can be used to generate this table
+        from a DataFrame of binary columns of observed data.
+    - metric: The metric to analyze. We suuport the following metrics by default:
+        Standard metrics: FPR, FNR, PPP, NPP, DP
+        Causal metrics: TE, CF, SE.
+    - bias: The name of the bias config file to load from the `bias_configs` directory.
+        Detault biases: selection, proxy_a, proxy_y, ecp, proxy_y_and_selection
+    - sensitivity_parameter_values: The value of the sensitivity parameter to use when bounding the metric.
+    - verbose: The verbosity level of the function.     
+        0 is silent, 
+        1 prints the stages of the bounding process, 
+        2 prints details of internal optimization calls
+    - get_metric_fns: A function that takes a `metric` string and returns the numerator and denominator queries for that metric.
+        The only reason to provide this function is to allow for custom metrics to be used. By default, the function uses the
+        `get_metric_expressions` function from `src/construct_fairness_metrics.py`. A custom function should have the same signature
+        as `get_metric_expressions`.
+
+    Returns:
+    - lower bound: The lower bound of the metric.
+    - upper bound: The upper bound of the metric.
+    - lower bound convergence: The convergence status of the lower bound.
+    - upper bound convergence: The convergence status of the upper bound.
     """
     current_dir = os.path.dirname(__file__)  # Get the directory of the current module
     with open(os.path.join(current_dir, "bias_configs", f"{bias}.json")) as f:

@@ -2,6 +2,16 @@ import pandas as pd
 import itertools
 
 def joint_distribution(df, variables=None):
+    """
+    This function computes the joint probability distribution of a set of binary variables.
+
+    Args:
+    - df: A pandas DataFrame containing binary variables.
+    - variables: A list of binary variables to compute the joint distribution for. If None, all columns in the DataFrame are used.
+
+    Returns:
+    - joint_dist_df: A pandas DataFrame containing the joint probability distribution of the specified variables.
+    """
     if variables is None:
         variables = df.columns.tolist()
     # Step 1: Filter the DataFrame to include only the specified variables

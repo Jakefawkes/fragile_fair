@@ -1,53 +1,6 @@
 from autobound.Query import Query
 from .query_algebra_utils import get_autobounds_query
 
-def get_numerator_for_difference_metrics(
-        problem, target_variable, conditioning_variable, 
-        target_value = 1, conditioning_value = 0
-    ):
-    """
-    This function returns the numerator for difference metrics.
-    Numerators and denominators need to be computed separately for computational reasons.
-
-    Args:
-    - problem: The problem object.
-    - target_variable: The target variable.
-    - conditioning_variable: The conditioning variable.
-    - target_value: The target value.
-    - conditioning_value: The conditioning value.
-    """
-    if conditioning_variable != "A":
-        variable_list = [target_variable, conditioning_variable, "A"]
-        variable_values = [target_value, conditioning_value]
-        term = get_autobounds_query(problem, variable_list, variable_values+[1]) * get_autobounds_query(problem, variable_list[1:], variable_values[1:]+[0])
-        term = term + get_autobounds_query(problem, variable_list, variable_values+[0], sign=-1) * get_autobounds_query(problem, variable_list[1:], variable_values[1:]+[1])
-    else:
-        variable_list = [target_variable, conditioning_variable]
-        variable_values = [target_value]
-        term = get_autobounds_query(problem, variable_list, variable_values+[1]) * get_autobounds_query(problem, ["A"], [0])  
-        term = term + get_autobounds_query(problem, variable_list, variable_values+[0], sign=-1)* get_autobounds_query(problem, ["A"], [1])  
-    return term
-
-def get_denominator_for_difference_metrics(
-        problem, conditioning_variable, conditioning_value = 0
-    ):
-    """
-    This function returns the denominator for difference metrics.
-    Denominators only involve the conditioning variable.
-
-    Args:
-    - problem: The problem object.
-    - conditioning_variable: The conditioning variable.
-    - conditioning_value: The conditioning value.
-    """
-    if conditioning_variable != "A":
-        variable_list = [conditioning_variable, "A"]
-        variable_values = [conditioning_value]
-        term = get_autobounds_query(problem, variable_list, variable_values + [0]) * get_autobounds_query(problem, variable_list, variable_values+[1])
-    else:
-        term = get_autobounds_query(problem, ["A"], [0]) * get_autobounds_query(problem, ["A"], [1])
-    return term
-
 def get_metric_expressions(
         problem, metric="FPR", 
         prediction_variable="P", attribute_variable="A", outcome_variable="Y",
@@ -56,13 +9,13 @@ def get_metric_expressions(
     This function returns the numerator and denominator for a given metric.
 
     Args:
-    - problem: The problem object.
+    - problem: The autobound problem object.
     - metric: The metric to analyze:
-          Standard metrics: FPR, FNR, PPP, NPP, DP
-          Causal metrics: TE, CF, SE.
-    - prediction_variable: The prediction variable.
-    - attribute_variable: The attribute variable.
-    - outcome_variable: The outcome variable.
+        Standard metrics: FPR, FNR, PPP, NPP, DP
+        Causal metrics: TE, CF, SE.
+    - prediction_variable: The prediction variable, typically P.
+    - attribute_variable: The attribute variable, typically A.
+    - outcome_variable: The outcome variable, typically Y.
 
     Returns:
     - numerator: The numerator query for the metric.
@@ -107,3 +60,51 @@ def get_metric_expressions(
     else:
         raise ValueError(f"Metric {metric} not recognized.")
     return numerator, denominator
+
+def get_numerator_for_difference_metrics(
+        problem, target_variable, conditioning_variable, 
+        target_value = 1, conditioning_value = 0
+):
+    """
+    This function returns the numerator for difference metrics.
+    
+    Args:
+    - problem: The problem object.
+    - target_variable: The target variable, typically Y or P.
+    - conditioning_variable: The conditioning variable, typically A or Y.
+    - target_value: The target value, zero or one.
+    - conditioning_value: The conditioning value, zero or one.
+
+    Returns:
+    - term: The numerator query for the difference metric.
+    """
+    if conditioning_variable != "A":
+        variable_list = [target_variable, conditioning_variable, "A"]
+        variable_values = [target_value, conditioning_value]
+        term = get_autobounds_query(problem, variable_list, variable_values+[1]) * get_autobounds_query(problem, variable_list[1:], variable_values[1:]+[0])
+        term = term + get_autobounds_query(problem, variable_list, variable_values+[0], sign=-1) * get_autobounds_query(problem, variable_list[1:], variable_values[1:]+[1])
+    else:
+        variable_list = [target_variable, conditioning_variable]
+        variable_values = [target_value]
+        term = get_autobounds_query(problem, variable_list, variable_values+[1]) * get_autobounds_query(problem, ["A"], [0])  
+        term = term + get_autobounds_query(problem, variable_list, variable_values+[0], sign=-1)* get_autobounds_query(problem, ["A"], [1])  
+    return term
+
+def get_denominator_for_difference_metrics(
+        problem, conditioning_variable, conditioning_value = 0
+    ):
+    """
+    This function returns the denominator for difference metrics.
+    
+    Args:
+    - problem: The problem object.
+    - conditioning_variable: The conditioning variable, typically A or Y.
+    - conditioning_value: The conditioning value, zero or one.
+    """
+    if conditioning_variable != "A":
+        variable_list = [conditioning_variable, "A"]
+        variable_values = [conditioning_value]
+        term = get_autobounds_query(problem, variable_list, variable_values + [0]) * get_autobounds_query(problem, variable_list, variable_values+[1])
+    else:
+        term = get_autobounds_query(problem, ["A"], [0]) * get_autobounds_query(problem, ["A"], [1])
+    return term
