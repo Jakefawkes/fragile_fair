@@ -10,7 +10,7 @@ def analyze_metric_sensitivity(
         dag_str, unob, constraints, cond_nodes=None, cond_node_values=1,
         attribute_node='A',outcome_node='Y',prediction_node='P',
         sensitivity_parameter_values=0.05, verbose=0, 
-        get_metric_fns=None
+        get_metric_fns=None, optimizer='ipopt'
 ): 
     """
     This function analyzes the sensitivity of a fairness metric to a given bias.
@@ -66,6 +66,7 @@ def analyze_metric_sensitivity(
         The only reason to provide this function is to allow for custom metrics to be used. By default, the function uses the
         `get_metric_expressions` function from `src/construct_fairness_metrics.py`. A custom function should have the same signature
         as `get_metric_expressions`. See `experiments/fogliato_reproduction.py` for an example of how to use a custom metric.
+    - optimizer: The optimizer to use when solving the optimization problem. The options are `ipopt` or `couenne`.
 
     Returns:
     - lower bound: The lower bound of the metric.
@@ -126,8 +127,8 @@ def analyze_metric_sensitivity(
     program = problem.write_program()
     
     if verbose >= 1:
-        print("Running ipopt")
-    result = program.run_pyomo('ipopt', verbose=verbose==2)
+        print(f"Running {optimizer}")
+    result = program.run_pyomo(optimizer, verbose=verbose==2)
 
     return result
 
