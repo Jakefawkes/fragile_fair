@@ -1,7 +1,15 @@
+import os
+import sys
+notebook_dir = os.getcwd()
+parent_dir = os.path.dirname(notebook_dir)
+# Add the parent directory to the Python path
+
+sys.path.append(parent_dir)
+
 import itertools 
 import numpy as np
 
-from ..src.query_algebra_utils import get_autobounds_query
+from src.query_algebra_utils import get_autobounds_query
 
 def get_p(
         df, prediction_node="P", attribute_node="A", outcome_node="Y"
@@ -68,7 +76,7 @@ def get_fogliato_true_bounds(prob_vec,sensitivity_parameter_value = 0.05,group=0
     
     return (max(0,metric_val[0]), min(1,metric_val[1]))
 
-def Fogliato_true_bounds(
+def fogliato_true_bounds(
         observed_joint_table, metric, 
         dag_str, constraints,
         attribute_node='A',outcome_node='Z',prediction_node='P',
