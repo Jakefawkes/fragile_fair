@@ -94,13 +94,13 @@ The `src/construct_fairness_metrics.py` file contains the code required to conve
 
 It is easy to create new bias configs by following the template of the existing bias configs. The `src/bias_configs` directory contains a number of bias configs for the biases discussed in the paper. The selection and proxy_y configs are good starting points for understanding the format. The `src/bias_configs/proxy_y_and_selection.json` file is an example of how these two configs can be combined, which is useful for understanding how to analyze multiple biases at once. More advanced users may also be interested in creating biases that rely on intervening on the DAG, we illustrate how to do this in the `src/bias_configs/ecp.json` config.
 
-It is important to note that custom parity metrics can be quite slow to compute, especially when the DAG contains a large nubmer of nodes or when the constraints are very complex. 
+It is important to note that custom parity metrics can be quite slow to compute, especially when the DAG contains a large nubmer of nodes or when the constraints are very complex.
 
 ## Creating New Fairness Metrics
 
 Creating new fairness metrics is more involved than creating new bias configs. The `src/construct_fairness_metrics.py` file contains the code for constructing the fairness metrics used in the paper. The `experiments/fogliato_reproduction.py` file contains an example of defining a new set of parity metrics based on the Fogliato et al. paper.
 
-It is important to note that custom parity metrics can be quite slow to compute, even moreso than custom biases. The runtime can depend on seemingly arbitrary factors which end up affecting the underlying optimization problem.
+Custom parity metrics can be quite slow to compute, even moreso than custom biases. The runtime can depend on seemingly arbitrary factors which end up affecting the underlying optimization problem.
 
 ## Understanding the Codebase
 
