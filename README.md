@@ -100,7 +100,7 @@ It is important to note that custom parity metrics can be quite slow to compute,
 
 Creating new fairness metrics is more involved than creating new bias configs. The `src/construct_fairness_metrics.py` file contains the code for constructing the fairness metrics used in the paper. The `experiments/fogliato_reproduction.py` file contains an example of defining a new set of parity metrics based on the Fogliato et al. paper.
 
-Custom parity metrics can be quite slow to compute, even moreso than custom biases. The runtime can depend on seemingly arbitrary factors which end up affecting the underlying optimization problem.
+Custom parity metrics can be quite slow to compute, even moreso than custom biases. The runtime can depend on seemingly arbitrary factors which end up affecting the underlying optimization problem. If you need a specific parity metric and are having trouble getting it to run, please create an issue and we will try to help you.
 
 ## Understanding the Codebase
 
