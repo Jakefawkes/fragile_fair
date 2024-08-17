@@ -94,6 +94,14 @@ The `src/construct_fairness_metrics.py` file contains the code required to conve
 
 It is easy to create new bias configs by following the template of the existing bias configs. The `src/bias_configs` directory contains a number of bias configs for the biases discussed in the paper. The selection and proxy_y configs are good starting points for understanding the format. The `src/bias_configs/proxy_y_and_selection.json` file is an example of how these two configs can be combined, which is useful for understanding how to analyze multiple biases at once. More advanced users may also be interested in creating biases that rely on intervening on the DAG, we illustrate how to do this in the `src/bias_configs/ecp.json` config.
 
+It is important to note that custom parity metrics can be quite slow to compute, especially when the DAG contains a large nubmer of nodes or when the constraints are very complex. 
+
+## Creating New Fairness Metrics
+
+Creating new fairness metrics is more involved than creating new bias configs. The `src/construct_fairness_metrics.py` file contains the code for constructing the fairness metrics used in the paper. The `experiments/fogliato_reproduction.py` file contains an example of defining a new set of parity metrics based on the Fogliato et al. paper.
+
+It is important to note that custom parity metrics can be quite slow to compute, even moreso than custom biases. The runtime can depend on seemingly arbitrary factors which end up affecting the underlying optimization problem.
+
 ## Understanding the Codebase
 
 The codebase is structured as follows:
@@ -111,10 +119,11 @@ fragile_fair/
 │       ├── ecp.json
 ├── experiments/
 │   ├── ...
+│   ├── fogliato_reproduction.py
 │   ├── utils.py
 ├── data/
 │   ├── ...
 
 ```
 
-The `src` directory contains the core codebase. The `analyze_metric_sensitivity.py` file contains the main functions for analyzing the sensitivity of fairness metrics to biases. The `construct_fairness_metrics.py` file contains the code for constructing the fairness metrics used in the paper. The `data_utils.py` file contains the code for converting a dataframe of results into an `observed_joint_table` which is the input to the `analyze_metric_sensitivity` function. The `bias_configs` directory contains the JSON files which specify the DAGs, constraints, and other parameters for the biases. The `experiments` directory contains the notebooks which reproduce the figures in the paper, as well as `utils.py` which contains functions for training fair machine learning classifiers on our datasets using the FairLearn package. The `data` directory contains the data used in the experiments.
+The `src` directory contains the core codebase. The `analyze_metric_sensitivity.py` file contains the main functions for analyzing the sensitivity of fairness metrics to biases. The `construct_fairness_metrics.py` file contains the code for constructing the fairness metrics used in the paper. The `data_utils.py` file contains the code for converting a dataframe of results into an `observed_joint_table` which is the input to the `analyze_metric_sensitivity` function. The `bias_configs` directory contains the JSON files which specify the DAGs, constraints, and other parameters for the biases. The `experiments` directory contains the notebooks which reproduce the figures in the paper, as well as `utils.py` which contains functions for training fair machine learning classifiers on our datasets using the FairLearn package. It also contains the `fogliato_reproduction.py` file which demonstrates how to define and run a custom fairness metrics. The `data` directory contains npz files for the data used in the experiments.

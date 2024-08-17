@@ -65,7 +65,7 @@ def analyze_metric_sensitivity(
     - get_metric_fns: A function that takes a `metric` string and returns the numerator and denominator queries for that metric.
         The only reason to provide this function is to allow for custom metrics to be used. By default, the function uses the
         `get_metric_expressions` function from `src/construct_fairness_metrics.py`. A custom function should have the same signature
-        as `get_metric_expressions`.
+        as `get_metric_expressions`. See `experiments/fogliato_reproduction.py` for an example of how to use a custom metric.
 
     Returns:
     - lower bound: The lower bound of the metric.
