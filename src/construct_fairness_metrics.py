@@ -43,7 +43,7 @@ def get_metric_expressions(
         denominator = get_denominator_for_difference_metrics(
             problem, cond_variable, conditioning_value
         )
-    elif metric in ["TE","CF","SE"]:
+    elif metric in ["TE", "CF", "SE"]:
         if "(" in prediction_variable:
             raise ValueError("Prediction variable cannot be interventional for causal metrics")
         elif "(" in attribute_variable:
@@ -60,6 +60,16 @@ def get_metric_expressions(
     else:
         raise ValueError(f"Metric {metric} not recognized.")
     return numerator, denominator
+
+def get_metric_fn(metric):
+    def metric_fn(problem, attribute_variable="A", outcome_variable="Y", prediction_variable="P"):
+        return get_metric_expressions(
+            problem, metric, 
+            prediction_variable=prediction_variable, 
+            attribute_variable=attribute_variable, 
+            outcome_variable=outcome_variable
+        )
+    return metric_fn
 
 def get_numerator_for_difference_metrics(
         problem, target_variable, conditioning_variable, 

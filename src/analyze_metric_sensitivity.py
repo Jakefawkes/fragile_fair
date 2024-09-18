@@ -3,14 +3,13 @@ from autobound.causalProblem import causalProblem
 from autobound.DAG import DAG
 from autobound.Query import Query
 import json
-from .construct_fairness_metrics import get_metric_expressions
+from .construct_fairness_metrics import get_metric_fn
                      
 def analyze_metric_sensitivity(
-        observed_joint_table, metric, 
+        observed_joint_table, metric_fn, 
         dag_str, unob, constraints, cond_nodes=None, cond_node_values=1,
         attribute_node='A',outcome_node='Y',prediction_node='P',
-        sensitivity_parameter_values=0.05, verbose=0, 
-        get_metric_fns=None, optimizer='ipopt'
+        sensitivity_parameter_values=0.05, verbose=0, optimizer='ipopt'
 ): 
     """
     This function analyzes the sensitivity of a fairness metric to a given bias.
@@ -41,9 +40,10 @@ def analyze_metric_sensitivity(
         non-conditioned variables in the DAG and the associated probability of that combination.
         The function `joint_distribution` in `src/data_utils.py` can be used to generate this table
         from a DataFrame of binary columns of observed data.
-    - metric: The metric to analyze. We suuport the following metrics by default:
-        Standard metrics: FPR, FNR, PPP, NPP, DP
-        Causal metrics: TE, CF, SE.
+    - metric_fn: The metric function to analyze. This should be a function that takes a `causalProblem` object and the
+        attribute, outcome, and prediction variables as arguments and returns the numerator and denominator of the metric.
+        A custom function should have the same signature as `get_metric_expressions`. 
+        See `experiments/fogliato_reproduction.py` for an example of how to create custom metrics.
     - dag_str: The edge list of the DAG.
     - unob: The list of unobserved nodes in the DAG.
     - constraints: A list of constraints to be applied when bounding the metric, these should be written in terms of the
@@ -62,10 +62,6 @@ def analyze_metric_sensitivity(
         0 is silent, 
         1 prints the stages of the bounding process, 
         2 prints details of internal optimization calls
-    - get_metric_fns: A function that takes a `metric` string and returns the numerator and denominator queries for that metric.
-        The only reason to provide this function is to allow for custom metrics to be used. By default, the function uses the
-        `get_metric_expressions` function from `src/construct_fairness_metrics.py`. A custom function should have the same signature
-        as `get_metric_expressions`. See `experiments/fogliato_reproduction.py` for an example of how to use a custom metric.
     - optimizer: The optimizer to use when solving the optimization problem. The options are `ipopt` or `couenne`.
 
     Returns:
@@ -77,9 +73,6 @@ def analyze_metric_sensitivity(
     dag = DAG()
     dag.from_structure(dag_str, unob = unob)
     problem = causalProblem(dag)
-
-    if get_metric_fns is None:
-        get_metric_fns = get_metric_expressions
 
     # This handles conditional node logic:
     # If cond_nodes is not None, then we need to add the conditional nodes to the observed_joint_table
@@ -112,9 +105,8 @@ def analyze_metric_sensitivity(
 
     if verbose >= 1:
         print("Collecting term")
-    numerator, denominator = get_metric_fns(
+    numerator, denominator = metric_fn(
         problem,
-        metric=metric, 
         attribute_variable=attribute_node,
         outcome_variable=outcome_node, 
         prediction_variable=prediction_node
@@ -136,7 +128,7 @@ def analyze_metric_sensitivity(
 def analyze_metric_bias_sensitivity(
         observed_joint_table, metric, bias, 
         sensitivity_parameter_values=0.05, 
-        verbose=0, get_metric_fns=None
+        verbose=0
 ):  
     """
     This function analyzes the sensitivity of a fairness metric to a given bias saved in a json file in the `bias_configs` directory.
@@ -159,10 +151,6 @@ def analyze_metric_bias_sensitivity(
         0 is silent, 
         1 prints the stages of the bounding process, 
         2 prints details of internal optimization calls
-    - get_metric_fns: A function that takes a `metric` string and returns the numerator and denominator queries for that metric.
-        The only reason to provide this function is to allow for custom metrics to be used. By default, the function uses the
-        `get_metric_expressions` function from `src/construct_fairness_metrics.py`. A custom function should have the same signature
-        as `get_metric_expressions`.
 
     Returns:
     - lower bound: The lower bound of the metric.
@@ -176,9 +164,9 @@ def analyze_metric_bias_sensitivity(
 
     return analyze_metric_sensitivity(
         observed_joint_table, 
-        metric=metric,
+        metric_fn=get_metric_fn(metric),
         sensitivity_parameter_values=sensitivity_parameter_values,
-        verbose=verbose, get_metric_fns=get_metric_fns,
+        verbose=verbose, 
         **bias_config
     )
 

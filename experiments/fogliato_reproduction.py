@@ -19,7 +19,7 @@ def get_p(
         p[i, j, k] = df["prob"][(df[attribute_node] == i) & (df[outcome_node] == j) & (df[prediction_node] == k)].item()
     return p
 
-def get_fogliato_metrics_autobounds(
+def get_metric_fogliato_expressions(
         problem, metric="FPR", group=0,
         prediction_variable="P", attribute_variable="A", outcome_variable="Y"
 ):
@@ -36,12 +36,40 @@ def get_fogliato_metrics_autobounds(
     
     return numerator, denominator
 
-def get_fogliato_true_bounds(prob_vec,sensitivity_parameter_value = 0.05,group=0,metric = "FPR",constrained = False,standard = True):
+def get_fogliato_metric_fn(metric):
+    def metric_fn(problem, attribute_variable="A", outcome_variable="Y", prediction_variable="P"):
+        return get_metric_fogliato_expressions(
+            problem, metric, 
+            prediction_variable=prediction_variable, 
+            attribute_variable=attribute_variable, 
+            outcome_variable=outcome_variable
+        )
+    return metric_fn
 
-    p = prob_vec[group,:,:]
+def get_fogliato_true_bounds(
+        prob_vec, sensitivity_parameter_value,
+        metric="FPR",
+        group=0, 
+        constrained=False, standard=True
+    ):
+    """
+    This function computes the algebraically derived bounds for the Fogliato Case.
+
+    Args:
+    - prob_vec: The probability vector.
+    - sensitivity_parameter_value: The sensitivity parameter value.
+    - metric: The metric to analyze.
+    - group: The group to constrain.
+    - constrained: Whether the DAG is constrained.
+
+    Returns:
+    - The lower bound.
+    - The upper bound.
+    """
+
+    p = prob_vec[group, :, :]
 
     if metric == "FPR":
-
         if standard:
             if not constrained:
                 metric_val = ((p[0,1]-sensitivity_parameter_value)/(p[0,1]+p[0,0]-sensitivity_parameter_value),(p[0,1])/(p[0,1]+p[0,0]-sensitivity_parameter_value))
