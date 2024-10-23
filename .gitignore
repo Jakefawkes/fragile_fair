@@ -126,4 +126,6 @@ venv.bak/
 dmypy.json
 .DS_Store
 
+experiments/data
+
 edit_nb.ipynb
